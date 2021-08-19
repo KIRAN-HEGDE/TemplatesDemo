@@ -1,0 +1,94 @@
+_schema-version: "3.2"
+ID: masterdetaildemo
+description: A Master Detail Fiori application.
+version: 0.0.1
+modules:
+- name: masterdetaildemo-dest-content
+  type: com.sap.application.content
+  requires:
+  - name: masterdetaildemo-dest-srv
+    parameters:
+      content-target: true
+  - name: masterdetaildemo-repo-host
+    parameters:
+      service-key:
+        name: masterdetaildemo-repo-host-key
+  - name: masterdetaildemo-uaa
+    parameters:
+      service-key:
+        name: masterdetaildemo-uaa-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: masterdetaildemo_repo_host
+          ServiceInstanceName: masterdetaildemo-html5-srv
+          ServiceKeyName: masterdetaildemo-repo-host-key
+          sap.cloud.service: masterdetaildemo
+        - Authentication: OAuth2UserTokenExchange
+          Name: masterdetaildemo_uaa
+          ServiceInstanceName: masterdetaildemo-xsuaa-srv
+          ServiceKeyName: masterdetaildemo-uaa-key
+          sap.cloud.service: masterdetaildemo
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: masterdetaildemo-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: masterdetaildemo-repo-host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - masterdetaildemo.zip
+      name: masterdetaildemo
+      target-path: resources/
+- name: masterdetaildemo
+  type: html5
+  path: .
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: masterdetaildemo-dest-srv
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: masterdetaildemo-dest-srv
+    service-plan: lite
+- name: masterdetaildemo-uaa
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: masterdetaildemo-xsuaa-srv
+    service-plan: application
+- name: masterdetaildemo-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: masterdetaildemo-html5-srv
+    service-plan: app-host
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
